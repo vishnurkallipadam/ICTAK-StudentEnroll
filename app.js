@@ -114,7 +114,7 @@ function verifyEmployeeToken(req, res) {
         
         let image = req.files.image;
         let id = req.body.id;
-        image.mv('/images/'+id+'.jpg',(error,result)=>{
+        image.mv('public/images/'+id+'.jpg',(error,result)=>{
            res.send();
         })
     })
@@ -124,7 +124,7 @@ function verifyEmployeeToken(req, res) {
         let image = req.files.image;
         let id = req.body.id;
         console.log(id)
-        image.mv('/images/'+id+'.jpg',(error,result)=>{
+        image.mv('public/images/'+id+'.jpg',(error,result)=>{
            res.send();
         })
     })
