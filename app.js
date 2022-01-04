@@ -110,7 +110,7 @@ function verifyEmployeeToken(req, res) {
 
 
 // image upload using express file uploads
-    app.post('/api/uploadImage',verifyAdminToken,(req,res,next) => {
+    app.post('/api/uploadImage',(req,res,next) => {
         
         let image = req.files.image;
         let id = req.body.id;
@@ -119,7 +119,7 @@ function verifyEmployeeToken(req, res) {
         })
     })
 
-    app.post('/api/studentImage',verifyAdminToken,(req,res,next) => {
+    app.post('/api/studentImage',(req,res,next) => {
         console.log(req.body)
         let image = req.files.image;
         let id = req.body.id;
