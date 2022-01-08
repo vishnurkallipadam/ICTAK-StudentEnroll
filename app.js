@@ -6,8 +6,7 @@ const {google}=require('googleapis')
 const bodyParser = require('body-parser')
 var fileUpload=require('express-fileupload')
 const port = process.env.PORT || 5000;
-const path = require('path');
-app.use(express.static('./dist/Student-enrollment-system'));
+
 const bcrypt=require('bcrypt')
 const jwt = require('jsonwebtoken')
 const razorpay=require('razorpay')
@@ -70,6 +69,37 @@ async function sendEmail(data){
     }
 }
 
+async function employeeMail(data){
+    try{
+        const accessToken=await oAuth2Client.getAccessToken()
+          let transporter = nodemailer.createTransport({
+            host: 'smtp.gmail.com',
+            secure: true,
+            auth: {
+                type: 'OAuth2',
+                user: 'creationzv@gmail.com',
+                clientId: CLIENT_ID,
+                clientSecret: CLIENT_SECRET,
+                refreshToken: REFRESH_TOKEN,
+                accessToken:accessToken
+            }
+        });
+
+          const mailOptions={
+              from:'ICT Academy Kerala <creationzv@gmail.com>',
+              to:data,
+              subject:'Employee Registered Successfully',
+              text:'Your request for employee registration has been approved by Admin. You can login with the credentials entered at the time of registration' 
+          }
+
+          const result =  await transporter.sendMail(mailOptions)
+          return result
+
+    }catch(error){
+        return error
+    }
+}
+
 let verify=false;
 
 function verifyEmployeeToken(req, res) {
@@ -81,7 +111,6 @@ function verifyEmployeeToken(req, res) {
         return res.status(401).send('Unauthorized request5')    
       }
       let payload = jwt.verify(token, 'employeeKey')
-      console.log(payload);
       if(!payload) {
         return res.status(401).send('Unauthorized request6')    
       }
@@ -98,7 +127,6 @@ function verifyEmployeeToken(req, res) {
       return res.status(401).send('Unauthorized request5')    
     }
     let payload = jwt.verify(token, 'adminKey')
-    console.log(payload);
     if(!payload) {
       return res.status(401).send('Unauthorized request6')    
     }
@@ -110,28 +138,28 @@ function verifyEmployeeToken(req, res) {
 
 
 // image upload using express file uploads
-    app.post('/api/uploadImage',(req,res,next) => {
+    app.post('/uploadImage',verifyAdminToken,(req,res,next) => {
         
         let image = req.files.image;
         let id = req.body.id;
-        image.mv('public/images/'+id+'.jpg',(error,result)=>{
+        image.mv('./public/images/'+id+'.jpg',(error,result)=>{
            res.send();
         })
     })
 
-    app.post('/api/studentImage',(req,res,next) => {
+    app.post('/studentImage',verifyAdminToken,(req,res,next) => {
         console.log(req.body)
         let image = req.files.image;
         let id = req.body.id;
         console.log(id)
-        image.mv('public/images/'+id+'.jpg',(error,result)=>{
+        image.mv('./public/images/'+id+'.jpg',(error,result)=>{
            res.send();
         })
     })
 
 
 // get all courses
-app.get('/api/courses',function(req,res){
+app.get('/courses',function(req,res){
     res.header("Acces-Control-Allow-Origin","*");
     res.header("Acces-Control-Allow-Methods: GET, POST, PATH, PUT, DELETE, HEAD");
     courseData.find()
@@ -141,7 +169,7 @@ app.get('/api/courses',function(req,res){
 });   
 
 // get single course using _id
-app.get('/api/course/:id',function(req,res){  
+app.get('/course/:id',function(req,res){  
     res.header("Acces-Control-Allow-Origin","*");
     res.header("Acces-Control-Allow-Methods: GET, POST, PATH, PUT, DELETE, HEAD"); 
     let id=req.params.id;
@@ -151,7 +179,7 @@ app.get('/api/course/:id',function(req,res){
 });
 
 // add course
-app.post('/api/add-course',verifyAdminToken,(req,res)=>{
+app.post('/add-course',verifyAdminToken,(req,res)=>{
     res.header("Acces-Control-Allow-Origin","*");
     res.header("Acces-Control-Allow-Methods: GET, POST, PATH, PUT, DELETE, HEAD"); 
     console.log(req.body);
@@ -173,7 +201,7 @@ app.post('/api/add-course',verifyAdminToken,(req,res)=>{
    
 });
 
-app.put('/api/update-course',verifyAdminToken,(req,res)=>{
+app.put('/update-course',verifyAdminToken,(req,res)=>{
     res.header("Acces-Control-Allow-Origin","*");
     res.header("Acces-Control-Allow-Methods: GET, POST, PATH, PUT, DELETE, HEAD"); 
     console.log(req.body)
@@ -194,7 +222,7 @@ app.put('/api/update-course',verifyAdminToken,(req,res)=>{
                                 })
 
 // delete course
-app.delete('/api/remove-course/:id',verifyAdminToken,(req,res)=>{  
+app.delete('/remove-course/:id',verifyAdminToken,(req,res)=>{  
     id = req.params.id;
     courseData.findByIdAndDelete({"_id":id})
     .then(()=>{
@@ -203,7 +231,7 @@ app.delete('/api/remove-course/:id',verifyAdminToken,(req,res)=>{
     })
 });
 
-app.post('/api/register-student',async (req,res)=>{
+app.post('/register-student',async (req,res)=>{
     res.header("Acces-Control-Allow-Origin","*");
     res.header("Acces-Control-Allow-Methods: GET, POST, PATH, PUT, DELETE, HEAD"); 
     courseData.updateOne(
@@ -268,7 +296,7 @@ app.post('/api/register-student',async (req,res)=>{
 
             
 
-app.post("/api/verify-payment",(req,res)=>{
+app.post("/verify-payment",(req,res)=>{
 
     let body=req.body.response.razorpay_order_id + "|" + req.body.response.razorpay_payment_id;
    
@@ -312,7 +340,7 @@ app.post("/api/verify-payment",(req,res)=>{
      });
 
 // get all students
-app.get('/api/students',verifySignin,function(req,res){
+app.get('/students',verifySignin,function(req,res){
     res.header("Acces-Control-Allow-Origin","*");
     res.header("Acces-Control-Allow-Methods: GET, POST, PATH, PUT, DELETE, HEAD");
     studentData.find({payment:'Success'})
@@ -321,7 +349,7 @@ app.get('/api/students',verifySignin,function(req,res){
                 });
 });
 
-app.post('/api/studentLogin',(req,res)=>{
+app.post('/studentLogin',(req,res)=>{
     res.header("Acces-Control-Allow-Origin","*");
     res.header("Acces-Control-Allow-Methods: GET, POST, PATH, PUT, DELETE, HEAD");
 
@@ -348,7 +376,7 @@ app.post('/api/studentLogin',(req,res)=>{
 
 })
 
-app.post('/api/adminLogin',async(req,res)=>{
+app.post('/adminLogin',async(req,res)=>{
     console.log("adminlogin");
     res.header("Acces-Control-Allow-Origin","*");
     res.header("Acces-Control-Allow-Methods: GET, POST, PATH, PUT, DELETE, HEAD");
@@ -373,7 +401,7 @@ app.post('/api/adminLogin',async(req,res)=>{
 
 })
 
-app.post('/api/employeeLogin',(req,res)=>{
+app.post('/employeeLogin',(req,res)=>{
     res.header("Acces-Control-Allow-Origin","*");
     res.header("Acces-Control-Allow-Methods: GET, POST, PATH, PUT, DELETE, HEAD");
     employeeData.findOne({email:req.body.employee.email,status:"approved"},(err,employee)=>{
@@ -399,7 +427,7 @@ app.post('/api/employeeLogin',(req,res)=>{
 
 })
 
-app.post('/api/employeeRegister',async(req,res)=>{
+app.post('/employeeRegister',async(req,res)=>{
     res.header("Acces-Control-Allow-Origin","*");
     res.header("Acces-Control-Allow-Methods: GET, POST, PATH, PUT, DELETE, HEAD");
     console.log(req.body);
@@ -416,7 +444,7 @@ app.post('/api/employeeRegister',async(req,res)=>{
     res.send()
 })
 
-app.get('/api/pending-employee',verifyAdminToken,(req,res)=>{
+app.get('/pending-employee',verifyAdminToken,(req,res)=>{
     res.header("Acces-Control-Allow-Origin","*");
     res.header("Acces-Control-Allow-Methods: GET, POST, PATH, PUT, DELETE, HEAD");
     employeeData.find({status:'pending'}).then((data)=>{
@@ -424,7 +452,7 @@ app.get('/api/pending-employee',verifyAdminToken,(req,res)=>{
     })
 })
 
-app.post('/api/approve-employee',verifyAdminToken,(req,res)=>{
+app.post('/approve-employee',verifyAdminToken,(req,res)=>{
     res.header("Acces-Control-Allow-Origin","*");
     res.header("Acces-Control-Allow-Methods: GET, POST, PATH, PUT, DELETE, HEAD");
     employeeData.updateOne(
@@ -434,11 +462,16 @@ app.post('/api/approve-employee',verifyAdminToken,(req,res)=>{
         {
             $set: { 'status': 'approved'} 
         }).then((data)=>{
-            res.send();
+            employeeData.findOne({_id:req.body.id},function(err,employee){ 
+                employeeMail(employee.email).then((response)=>{
+                    console.log(response);
+                    res.send();
+                })
+            })
         })
 })
 
-app.delete('/api/reject-employee/:id',verifyAdminToken,(req,res)=>{  
+app.delete('/reject-employee/:id',verifyAdminToken,(req,res)=>{  
     id = req.params.id;
     employeeData.findByIdAndDelete({"_id":id})
     .then(()=>{
@@ -448,7 +481,7 @@ app.delete('/api/reject-employee/:id',verifyAdminToken,(req,res)=>{
 });
 
 // employee
-app.get('/api/employees',verifyAdminToken,(req,res)=>{
+app.get('/employees',verifyAdminToken,(req,res)=>{
     employeeData.find({status:"approved"})
     .then((data)=>{
         res.send(data)
@@ -456,7 +489,7 @@ app.get('/api/employees',verifyAdminToken,(req,res)=>{
 })
 
 // search student
-app.get('/api/search-student',verifySignin,(req,res)=>{
+app.get('/search-student',verifySignin,(req,res)=>{
     res.header("Acces-Control-Allow-Origin","*");
     res.header("Acces-Control-Allow-Methods: GET, POST, PATH, PUT, DELETE, HEAD");
     studentData.find({payment:'Success'})
@@ -467,7 +500,7 @@ app.get('/api/search-student',verifySignin,(req,res)=>{
 })
 
 // delete student
-app.delete('/api/remove-student/:id',verifyAdminToken,(req,res)=>{  
+app.delete('/remove-student/:id',verifyAdminToken,(req,res)=>{  
     id = req.params.id;
     studentData.findByIdAndDelete({"_id":id})
     .then(()=>{
@@ -477,7 +510,7 @@ app.delete('/api/remove-student/:id',verifyAdminToken,(req,res)=>{
 });
 
 // delete employee
-app.delete('/api/remove-employee/:id',verifyAdminToken,(req,res)=>{  
+app.delete('/remove-employee/:id',verifyAdminToken,(req,res)=>{  
     id = req.params.id;
     employeeData.findByIdAndDelete({"_id":id})
     .then(()=>{
@@ -487,7 +520,7 @@ app.delete('/api/remove-employee/:id',verifyAdminToken,(req,res)=>{
 });
 
 // get single student using _id
-app.get('/api/student/:id',verifySignin,function(req,res){  
+app.get('/student/:id',verifySignin,function(req,res){  
     res.header("Acces-Control-Allow-Origin","*");
     res.header("Acces-Control-Allow-Methods: GET, POST, PATH, PUT, DELETE, HEAD"); 
     let id=req.params.id;
@@ -497,7 +530,7 @@ app.get('/api/student/:id',verifySignin,function(req,res){
 });
 
 // get single employee using _id
-app.get('/api/employee/:id',verifyAdminToken,function(req,res){  
+app.get('/employee/:id',verifyAdminToken,function(req,res){  
     res.header("Acces-Control-Allow-Origin","*");
     res.header("Acces-Control-Allow-Methods: GET, POST, PATH, PUT, DELETE, HEAD"); 
     let id=req.params.id;
@@ -507,7 +540,7 @@ app.get('/api/employee/:id',verifyAdminToken,function(req,res){
 });
 
 // update employee
-app.put('/api/update-employee',verifyAdminToken,(req,res)=>{
+app.put('/update-employee',verifyAdminToken,(req,res)=>{
     res.header("Acces-Control-Allow-Origin","*");
     res.header("Acces-Control-Allow-Methods: GET, POST, PATH, PUT, DELETE, HEAD"); 
     console.log(req.body)
@@ -526,7 +559,7 @@ app.put('/api/update-employee',verifyAdminToken,(req,res)=>{
 })
 
 // update sstudent
-app.put('/api/update-student',(req,res)=>{
+app.put('/update-student',(req,res)=>{
     res.header("Acces-Control-Allow-Origin","*");
     res.header("Acces-Control-Allow-Methods: GET, POST, PATH, PUT, DELETE, HEAD"); 
     console.log(req.body)
@@ -553,7 +586,7 @@ app.put('/api/update-student',(req,res)=>{
 })
 
 // enter exit mark
-app.put('/api/exit-mark',verifySignin,(req,res)=>{
+app.put('/exit-mark',verifySignin,(req,res)=>{
     res.header("Acces-Control-Allow-Origin","*");
     res.header("Acces-Control-Allow-Methods: GET, POST, PATH, PUT, DELETE, HEAD"); 
     console.log(req.body.student.mark)
@@ -581,9 +614,5 @@ function verifySignin(req,res,next){
         next()
     }
 }
-
-app.get('/*', function(req, res) {
-    res.sendFile(path.join(__dirname + '/dist/Student-enrollment-system/index.html'));
-   });
 
 app.listen(port,()=>{console.log("server Ready at"+port)});
